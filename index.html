@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>EV Charge Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    /* ────────────────────────────────
+       Base Font & Layout
+       ──────────────────────────────── */
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.25s, color 0.25s;
+    }
+
+    :root {
+      --bg: #f4f5f7;
+      --text: #222;
+      --card: #fff;
+      --border: #ddd;
+      --summary-yellow: #fff8d5;
+      --summary-blue: #dff7ff;
+      --table-header: #f0f2f7;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --text: #e6e6e6;
+        --card: #1e1e1e;
+        --border: #333;
+        --summary-yellow: #5c4b00;
+        --summary-blue: #003b5c;
+        --table-header: #2a2a2a;
+      }
+    }
+
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 12px;
+      text-align: center;
+    }
+
+    /* ────────────────────────────────
+       Card
+       ──────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .form-row input {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .form-row label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* ────────────────────────────────
+       Buttons
+       ──────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      border-radius: 999px;
+      border: none;
+      background: #0f9d58;
+      color: #fff;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 8px;
+      border-radius: 999px;
+      border: none;
+      background: #555;
+      color: white;
+      font-weight: 500;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .btn-primary:active,
+    .btn-secondary:active {
+      opacity: 0.85;
+    }
+
+    /* ────────────────────────────────
+       Summary
+       ──────────────────────────────── */
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .summary-box {
+      flex: 1 1 150px;
+      background: var(--summary-yellow);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 600;
+    }
+
+    .summary-box.blue {
+      background: var(--summary-blue);
+    }
+
+    .summary-box span {
+      display: block;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    /* ────────────────────────────────
+       Table
+       ──────────────────────────────── */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 560px;
+      border-collapse: collapse;
+      color: var(--text);
+    }
+
+    th {
+      background: var(--table-header);
+    }
+
+    th,
+    td {
+      padding: 6px 4px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 10px;
+      opacity: 0.7;
+      font-size: 12px;
+    }
+
+    /* ────────────────────────────────
+       Monthly List
+       ──────────────────────────────── */
+    .month-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .month-value {
+      font-weight: 600;
+    }
+
+    /* ────────────────────────────────
+       Icons Buttons
+       ──────────────────────────────── */
+    .icon-btn {
+      background: transparent;
+      border: none;
+      padding: 2px;
+      margin-right: 4px;
+      cursor: pointer;
+    }
+
+    .icon-btn img {
+      width: 18px;
+      height: 18px;
+      opacity: 0.8;
+    }
+
+    .icon-btn:active img {
+      opacity: 1;
+    }
+
+    /* ────────────────────────────────
+       Desktop mode
+       ──────────────────────────────── */
+    @media (min-width: 768px) {
+      .app {
+        max-width: 900px;
+        margin-top: 24px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>EV Charge Log</h1>
+
+    <!-- Input / Edit Form -->
+    <div class="card">
+      <div class="form-row">
+        <div style="flex:1.1 1 140px">
+          <label>Date</label>
+          <input id="date" type="date" />
+        </div>
+        <div style="flex:0.9 1 90px">
+          <label>Start %</label>
+          <input id="start" type="number" />
+        </div>
+        <div style="flex:0.9 1 90px">
+          <label>End %</label>
+          <input id="end" type="number" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div style="flex:1.1 1 160px">
+          <label>Location</label>
+          <input id="location" type="text" />
+        </div>
+        <div style="flex:0.9 1 110px">
+          <label>Rate</label>
+          <input id="rate" type="number" step="0.01" />
+        </div>
+        <div style="flex:0.9 1 110px">
+          <label>Cost (RM)</label>
+          <input id="cost" type="number" step="0.01" />
+        </div>
+      </div>
+
+      <button class="btn-primary" id="submit-btn">Add Record</button>
+      <button class="btn-secondary" id="cancel-btn">Cancel Edit</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="summary-box" id="total-cost-box">
+        RM0.00
+        <span>Total Cost</span>
+      </div>
+      <div class="summary-box blue" id="total-kwh-box">
+        0.00 kWh
+        <span>Total Charged</span>
+      </div>
+    </div>
+
+    <!-- Monthly Summary -->
+    <div class="card">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">
+        Monthly Total (RM)
+      </div>
+      <div id="monthly-summary">
+        <div class="empty">No data yet</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Start%</th>
+              <th>End%</th>
+              <th>Location</th>
+              <th>Rate</th>
+              <th>Cost</th>
+              <th>Charged</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty-row">No data yet</div>
+    </div>
+  </div>
+
+<script>
+  const STORAGE = "ev_charge_log_dark_v1";
+  let records = [];
+  let editingIndex = null;
+
+  const dateEl = document.getElementById("date");
+  const startEl = document.getElementById("start");
+  const endEl = document.getElementById("end");
+  const locEl = document.getElementById("location");
+  const rateEl = document.getElementById("rate");
+  const costEl = document.getElementById("cost");
+
+  function load() {
+    const raw = localStorage.getItem(STORAGE);
+    if (raw) records = JSON.parse(raw);
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE, JSON.stringify(records));
+  }
+
+  function resetForm() {
+    editingIndex = null;
+    dateEl.value = "";
+    startEl.value = "";
+    endEl.value = "";
+    locEl.value = "";
+    rateEl.value = "";
+    costEl.value = "";
+    submitBtn.textContent = "Add Record";
+    cancelBtn.style.display = "none";
+  }
+
+  function editRow(i) {
+    const r = records[i];
+    editingIndex = i;
+    dateEl.value = r.date;
+    startEl.value = r.start;
+    endEl.value = r.end;
+    locEl.value = r.location;
+    rateEl.value = r.rate;
+    costEl.value = r.cost;
+
+    submitBtn.textContent = "Save Changes";
+    cancelBtn.style.display = "block";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function deleteRow(i) {
+    if (confirm("Delete this record?")) {
+      records.splice(i, 1);
+      save();
+      resetForm();
+      render();
+    }
+  }
+
+  function formatDate(d) {
+    if (!d) return "";
+    const dd = new Date(d);
+    return dd.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit"
+    });
+  }
+
+  function render() {
+    const tbody = document.getElementById("table-body");
+    const empty = document.getElementById("empty-row");
+    const monthlyDiv = document.getElementById("monthly-summary");
+
+    tbody.innerHTML = "";
+    monthlyDiv.innerHTML = "";
+
+    if (records.length === 0) {
+      empty.style.display = "block";
+      monthlyDiv.innerHTML = '<div class="empty">No data yet</div>';
+      document.getElementById("total-cost-box").firstChild.nodeValue = "RM0.00";
+      document.getElementById("total-kwh-box").firstChild.nodeValue = "0.00 kWh";
+      return;
+    }
+
+    empty.style.display = "none";
+
+    let totalCost = 0;
+    let totalKwh = 0;
+    const monthly = {};
+
+    records.forEach((r, i) => {
+      const charged = r.rate > 0 ? r.cost / r.rate : 0;
+
+      totalCost += r.cost;
+      totalKwh += charged;
+
+      const key = r.date.slice(0, 7);
+      monthly[key] = (monthly[key] || 0) + r.cost;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${formatDate(r.date)}</td>
+        <td>${r.start}</td>
+        <td>${r.end}</td>
+        <td>${r.location}</td>
+        <td>${r.rate.toFixed(2)}</td>
+        <td>RM${r.cost.toFixed(2)}</td>
+        <td>${charged.toFixed(2)}</td>
+        <td></td>
+      `;
+
+      const act = tr.lastElementChild;
+      const editBtn = document.createElement("button");
+      editBtn.className = "icon-btn";
+      editBtn.innerHTML = `<img src="https://img.icons8.com/ios-filled/50/ffffff/edit.png"/>`;
+      editBtn.onclick = () => editRow(i);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "icon-btn";
+      delBtn.innerHTML = `<img src="https://img.icons8.com/ios-glyphs/30/fa314a/trash.png"/>`;
+      delBtn.onclick = () => deleteRow(i);
+
+      act.appendChild(editBtn);
+      act.appendChild(delBtn);
+
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("total-cost-box").firstChild.nodeValue =
+      "RM" + totalCost.toFixed(2);
+
+    document.getElementById("total-kwh-box").firstChild.nodeValue =
+      totalKwh.toFixed(2) + " kWh";
+
+    Object.keys(monthly)
+      .sort()
+      .forEach((key) => {
+        const div = document.createElement("div");
+        div.className = "month-row";
+        div.innerHTML = `
+          <div>${key.slice(5)}/${key.slice(0,4)}</div>
+          <div class="month-value">RM${monthly[key].toFixed(2)}</div>
+        `;
+        monthlyDiv.appendChild(div);
+      });
+  }
+
+  submitBtn.onclick = function () {
+    const r = {
+      date: dateEl.value,
+      start: Number(startEl.value),
+      end: Number(endEl.value),
+      location: locEl.value,
+      rate: Number(rateEl.value),
+      cost: Number(costEl.value),
+    };
+
+    if (!r.date || !r.rate || !r.cost) {
+      alert("Date, Rate, Cost cannot be empty.");
+      return;
+    }
+
+    if (editingIndex === null) {
+      records.push(r);
+    } else {
+      records[editingIndex] = r;
+    }
+
+    save();
+    resetForm();
+    render();
+  };
+
+  cancelBtn.onclick = resetForm;
+
+  load();
+  render();
+</script>
+
+</body>
+</html>
